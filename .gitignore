@@ -14,3 +14,6 @@ docs
 .claude
 .pytest_cache
 .ruff_cache
+
+/temp
+/teaching 

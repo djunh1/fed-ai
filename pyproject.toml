@@ -68,13 +68,8 @@ default-groups = ["dev"]
 
 [tool.poe.tasks]
 # Data pipelines
-run-digital-data-etl-alex = "echo 'It is not supported anymore.'"
-run-digital-data-etl-maxime = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename digital_data_etl_maxime_labonne.yaml"
-run-digital-data-etl-paul = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename digital_data_etl_paul_iusztin.yaml"
-run-digital-data-etl = [
-    "run-digital-data-etl-maxime",
-    "run-digital-data-etl-paul",
-]
+run-digital-data-etl-fed = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename digital_data_etl_fed.yaml"
+
 run-feature-engineering-pipeline = "uv run python -m tools.run --no-cache --run-feature-engineering"
 run-generate-instruct-datasets-pipeline = "uv run python -m tools.run --no-cache --run-generate-instruct-datasets"
 run-generate-preference-datasets-pipeline = "uv run python -m tools.run --no-cache --run-generate-preference-datasets"
