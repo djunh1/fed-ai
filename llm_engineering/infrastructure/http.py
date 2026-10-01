@@ -8,10 +8,36 @@ from loguru import logger
 
 MAX_ATTEMPTS = 3
 
+class RateLimiter:
+    """
+    Rate limiter for the FRASER Api
+    """
+
+    def __init__(self, rate_per_minute: float = 28.0, capacity: float = 5.0) -> None:
+        self._rate = rate_per_minute / 60.0
+        self._capacity = capacity
+        self._tokens = capacity
+        self._last = time.monotonic()
+
+    def acquire(self) -> None:
+        now = time.monotonic()
+        self._tokens = min(self._capacity, self._tokens + (now-self._last) * self._rate)
+
+        self._last = now
+
+        if self._tokens >= 1.0:
+            self._tokens -= 1.0
+            return 
+        
+        wait = (1.0 - self._tokens) / self._rate
+        time.sleep(wait)
+        self._tokens = 0.0
+        self._last = time.monotonic()
+    
+
 def _cache_key(url: str, params: dict | None) -> str:
     key = url + json.dumps(params, sort_keys=True)
     return hashlib.sha256(key.encode()).hexdigest()
-
 
 def get(
     url: str,
