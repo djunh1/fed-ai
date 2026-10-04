@@ -40,6 +40,10 @@ CALENDARS_URL = f"{BASE}/monetarypolicy/fomccalendars.htm"
 # Trailing "(10.12 MB PDF)" / "611 KB PDF" noise in link text.
 _SIZE_SUFFIX = re.compile(r"\s*\(?\s*[\d.]+\s*[KMG]B\s+PDF\s*\)?\s*$", re.IGNORECASE)
 
+# Where a page offers the same document in two formats, the anchor text is
+# the format rather than a title. Naming a file "HTML" tells you nothing.
+_FORMAT_ONLY_TITLES = frozenset({"html", "pdf", "zip", "accessible version", "text"})
+
 # A run of 8 digits can parse as a perfectly valid date and still be nonsense:
 # FOMChminec119401101.pdf is a part number followed by 19401101, and reading
 # the first 8 gives the year 1194. Anything outside these bounds means the
@@ -49,8 +53,11 @@ LATEST_PLAUSIBLE_YEAR = datetime.date.today().year + 3  # calendars list future 
 
 PRESS_INDEX_URL = f"{BASE}/json/ne-press.json"
 
-# The two title forms the Fed has used for an FOMC statement release.
-_STATEMENT_TITLES = frozenset({"fomc statement", "federal reserve issues fomc statement"})
+# Title prefixes, not exact titles. Nine real statements carry a suffix -- the
+# 2006-05-10 one bundled with a discount-rate approval, and six crisis-era
+# intermeeting statements titled "FOMC statement: Federal Reserve and other
+# central banks announce...". str.startswith accepts a tuple.
+_STATEMENT_TITLE_PREFIXES = ("fomc statement", "federal reserve issues fomc statement")
 
 # Both shapes seen in the feed's `d` field.
 _PRESS_DATE_FORMATS = ("%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y")
@@ -211,11 +218,12 @@ def classify_url(url: str) -> Classified | None:
 def _clean_title(text: str, classified: Classified) -> str:
     """Link text minus the file-size parenthetical, or a synthesised title.
 
-    Some anchors are nothing but the size ("1.82 MB PDF"), which is not a
-    title. Falling back to type + date keeps every document identifiable.
+    Some anchors carry no title at all -- just the size ("1.82 MB PDF") or
+    the format ("HTML", "PDF"), which is 11% of the corpus. Falling back to
+    type + date keeps every document identifiable in a listing.
     """
     title = _SIZE_SUFFIX.sub("", text).strip()
-    if title:
+    if title and title.lower() not in _FORMAT_ONLY_TITLES:
         return title
     return f"{classified.info_type.value.replace('_', ' ').title()} {classified.meeting_date}"
 
@@ -297,7 +305,7 @@ def fetch_press_index(
 
         title = html.unescape(record.get("t", "")).strip()
 
-        if title.lower().rstrip(".") not in _STATEMENT_TITLES:
+        if not title.lower().startswith(_STATEMENT_TITLE_PREFIXES):
             continue
 
         url = urljoin(BASE, record["l"])
@@ -330,8 +338,16 @@ def _extract_html(content: bytes) -> ExtractedText:
     for tag in soup(_CHROME_TAGS):
         tag.decompose()
 
-    # The Fed wraps body copy in #article; fall back for older layouts.
-    node = soup.find(id="article") or soup.body or soup
+    # Container ids vary by era: #article on modern pages, #content on 1990s
+    # and 2010s layouts. Falling straight through to <body> drags the whole
+    # nav in -- a 1993 minutes page goes from ~25k useful chars to 74k.
+    node = (
+        soup.find(id="article")
+        or soup.find(id="content")
+        or soup.find("main")
+        or soup.body
+        or soup
+    )
     text = _BLANK_RUN.sub("\n\n", node.get_text("\n", strip=True))
     return ExtractedText(text)
 

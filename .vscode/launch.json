@@ -15,6 +15,71 @@
       }
     },
     {
+      "name": "Debug: fedgov index URLs",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fedgov.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Debug: parse_index",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_parse_index.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Debug: try pattern",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/try_pattern.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Debug: iter_documents",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_iter_documents.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
+      "name": "Debug: fetch_press_index",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_press_index.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      }
+    },
+    {
       "name": "Debug: current file",
       "type": "debugpy",
       "request": "launch",

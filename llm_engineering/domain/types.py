@@ -20,8 +20,12 @@ class FedInfoType(StrEnum):
     STATEMENT = "statement"
     TRANSCRIPT = "transcript"
     MEMORANDA_OF_DISCUSSION = "memoranda_of_discussion"
+    MINUTES_OF_ACTIONS = "minutes_of_actions"
     BEIGE_BOOK = "beige_book"
+    TEAL_BOOK = "teal_book"
     BRIEFING_BOOK = "briefing_book"
+    RECORD_OF_POLICY_ACTIONS = "record_of_policy_actions"
+    PRESS_CONFERENCE = "press_conference"
     UNKNOWN = "unknown"
 
 

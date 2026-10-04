@@ -65,7 +65,7 @@ default-groups = ["dev"]
 
 [tool.poe.tasks]
 # Data pipelines
-run-digital-data-etl-fed = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename digital_data_etl_fed.yaml"
+run-fed-data-etl = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename fed_data_etl.yaml"
 
 run-feature-engineering-pipeline = "uv run python -m tools.run --no-cache --run-feature-engineering"
 run-generate-instruct-datasets-pipeline = "uv run python -m tools.run --no-cache --run-generate-instruct-datasets"

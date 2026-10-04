@@ -424,6 +424,17 @@ def test_parse_index_strips_file_sizes_from_titles() -> None:
     assert transcript.title == "Transcript"
 
 
+@pytest.mark.parametrize("label", ["HTML", "PDF", "pdf", "Accessible version"])
+def test_parse_index_synthesises_a_title_when_the_text_is_only_a_format(label: str) -> None:
+    """Where a page offers one document in two formats the anchor text is the
+    format, not a title -- 11% of the corpus was stored as "HTML" or "PDF"."""
+    page = f'<a href="/monetarypolicy/fomcminutes20150128.htm">{label}</a>'.encode()
+
+    (doc,) = parse_index(page)
+
+    assert doc.title == "Minutes 2015-01-28"
+
+
 def test_parse_index_synthesises_a_title_when_the_text_is_only_a_size() -> None:
     """One real anchor reads '1.82 MB PDF' and nothing else. Stripping the
     size leaves an empty string, which is not a usable title."""

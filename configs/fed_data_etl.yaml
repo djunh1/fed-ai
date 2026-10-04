@@ -1,0 +1,14 @@
+# No `settings:` block. The handbook's config carried a docker parent_image
+# pointing at the book author's ECR account plus a skip_build flag that
+# ZenML 0.74's DockerSettings rejects. The local orchestrator needs neither.
+
+parameters:
+  # Responses are cached here, so re-runs and offline development are free.
+  cache_dir: temp/http_cache
+  # The press feed is always refetched regardless; this forces index pages too.
+  force: false
+  # Bound the expensive half. Widen once a single year looks right.
+  year_from: 1995
+  year_to: 1995
+  # Cap for a smoke run; null means "every document in the year range".
+  limit: null
