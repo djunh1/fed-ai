@@ -146,3 +146,54 @@ def test_fedgov_api_domain_matches_the_module(dispatcher: ApiDispatcher) -> None
 
     assert FedGovApi.domain == fedgov.BASE
     assert dispatcher.get_api(fedgov.BASE) is not None
+
+
+# --- from_sources: the config-driven constructor -------------------------
+
+
+def test_from_sources_builds_fedgov_only() -> None:
+    """What fed_data_etl.yaml produces."""
+    dispatcher = ApiDispatcher.from_sources(["fed_gov"])
+
+    assert len(dispatcher) == 1
+    assert isinstance(dispatcher.sources()[0], FedGovApi)
+
+
+def test_from_sources_builds_fraser_only() -> None:
+    """What fraser_data_etl.yaml produces. The two corpora run as separate
+    invocations of the same pipeline, never merged."""
+    from llm_engineering.application.api.fraser_api import FraserApi
+
+    dispatcher = ApiDispatcher.from_sources(["fraser"])
+
+    assert len(dispatcher) == 1
+    assert isinstance(dispatcher.sources()[0], FraserApi)
+
+
+def test_from_sources_accepts_both() -> None:
+    dispatcher = ApiDispatcher.from_sources(["fed_gov", "fraser"])
+
+    assert len(dispatcher) == 2
+
+
+def test_from_sources_rejects_an_unknown_name() -> None:
+    """A typo must not yield an empty dispatcher: that would make a run
+    report "0 new documents" and look like a success."""
+    with pytest.raises(ValueError):
+        ApiDispatcher.from_sources(["fed-gov"])
+
+
+def test_from_sources_rejects_silently_empty_config() -> None:
+    """An empty list is legal but useless -- assert it stays empty rather
+    than quietly defaulting to everything."""
+    assert len(ApiDispatcher.from_sources([])) == 0
+
+
+def test_from_sources_names_match_the_enum() -> None:
+    """The config spells sources as SourceSystem values, so the two cannot
+    drift apart."""
+    from llm_engineering.domain.types import SourceSystem
+
+    dispatcher = ApiDispatcher.from_sources([s.value for s in SourceSystem])
+
+    assert len(dispatcher) == len(SourceSystem)

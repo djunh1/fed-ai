@@ -13,6 +13,7 @@ from llm_engineering.domain.documents import FedDocument, FedTextDocument
 @step
 def extract_fed_text(
     document_urls: list[str],
+    sources: list[str],
     year_from: int | None = None,
     year_to: int | None = None,
     cache_dir: str | None = None,
@@ -20,12 +21,15 @@ def extract_fed_text(
 ) -> Annotated[int, "extracted_count"]:
     """Download and extract text for documents not already extracted.
 
-    This is the expensive half -- the full corpus is 15-40 GB. `year_from` /
-    `year_to` bound it so the first run can be one year, and `limit` caps a
-    smoke test. Resumption is free: anything already in fed_text is skipped,
-    so a run killed at document 3,000 picks up at 3,000.
+    This is the expensive half -- fed.gov's full corpus is 15-40 GB.
+    `year_from` / `year_to` bound it so the first run can be one year, and
+    `limit` caps a smoke test. Resumption is free: anything already in
+    fed_text is skipped, so a run killed at document 3,000 picks up at 3,000.
+
+    `sources` must match the manifest step's, or documents will enumerate
+    and then fail to route.
     """
-    dispatcher = ApiDispatcher.build().register_fedgov()
+    dispatcher = ApiDispatcher.from_sources(sources)
     # Same boundary conversion as build_fed_manifest: ZenML params are
     # JSON-serialisable, so cache_dir is a string here.
     cache = Path(cache_dir) if cache_dir else None
@@ -50,14 +54,21 @@ def extract_fed_text(
     failed: list[str] = []
 
     for doc in tqdm(pending, desc="extracting"):
-        api = dispatcher.get_api(doc.url)
+        # FRASER carries pre-extracted text alongside the PDF, so prefer it:
+        # no pypdf, no OCR, and it is the only thing that makes the 1930s
+        # typewriter scans readable. fed.gov documents have no text_url and
+        # fall through to the document URL itself.
+        fetch_url = doc.text_url or doc.url
+        media_type = "text/plain" if doc.text_url else doc.media_type
+
+        api = dispatcher.get_api(fetch_url)
         if api is None:
             failed.append(doc.url)
             continue
 
         try:
-            content = api.fetch(doc.url, cache_dir=cache)
-            result = api.extract_text(content, doc.media_type)
+            content = api.fetch(fetch_url, cache_dir=cache)
+            result = api.extract_text(content, media_type)
         except (httpx.HTTPStatusError, httpx.TransportError) as exc:
             logger.warning(f"Fetch failed for {doc.url}: {exc!r}")
             failed.append(doc.url)
@@ -92,7 +103,7 @@ def extract_fed_text(
     step_context = get_step_context()
     step_context.add_output_metadata(
         output_name="extracted_count",
-        metadata=_get_metadata(pending, extracted, empty, failed, year_from, year_to),
+        metadata=_get_metadata(sources, pending, extracted, empty, failed, year_from, year_to),
     )
 
     return extracted
@@ -107,6 +118,7 @@ def _in_range(year: int, year_from: int | None, year_to: int | None) -> bool:
 
 
 def _get_metadata(
+    sources: list[str],
     pending: list[FedDocument],
     extracted: int,
     empty: list[str],
@@ -115,7 +127,12 @@ def _get_metadata(
     year_to: int | None,
 ) -> dict:
     return {
-        "query": {"year_from": year_from, "year_to": year_to, "candidates": len(pending)},
+        "query": {
+            "sources": sources,
+            "year_from": year_from,
+            "year_to": year_to,
+            "candidates": len(pending),
+        },
         "retrieved": {
             "extracted": extracted,
             "empty": len(empty),

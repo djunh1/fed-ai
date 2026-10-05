@@ -47,6 +47,7 @@ def get(
     timeout: float = 30.0,
     cache_dir: Path | None = None,  # None = no caching
     force: bool = False,
+    limiter: "RateLimiter | None" = None,  # None = unthrottled
 ) -> bytes:
 
     # Read cache
@@ -54,11 +55,17 @@ def get(
         path = cache_dir / f"{_cache_key(url, params)}.bin"
         if not force and path.exists():
             return path.read_bytes()
-            
+
 
     for attempt in range(MAX_ATTEMPTS):
         last_attempt = attempt == MAX_ATTEMPTS -1
-        
+
+        # After the cache read, so a cache hit costs
+        # no quota. Inside the loop, so each retry spends its own token --
+        # a retry is a request and the server counts it.
+        if limiter is not None:
+            limiter.acquire()
+
         try:
             response = httpx.get(url, params=params, headers=headers, timeout=timeout)
         except httpx.TransportError:

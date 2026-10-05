@@ -66,6 +66,9 @@ default-groups = ["dev"]
 [tool.poe.tasks]
 # Data pipelines
 run-fed-data-etl = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename fed_data_etl.yaml"
+# Same pipeline, the other corpus. Separate run so a FRASER 401 cannot break
+# the fed.gov sync. Needs FED_API_KEY.
+run-fraser-data-etl = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename fraser_data_etl.yaml"
 
 run-feature-engineering-pipeline = "uv run python -m tools.run --no-cache --run-feature-engineering"
 run-generate-instruct-datasets-pipeline = "uv run python -m tools.run --no-cache --run-generate-instruct-datasets"

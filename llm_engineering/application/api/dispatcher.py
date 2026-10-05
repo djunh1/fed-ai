@@ -1,10 +1,14 @@
 import re
+from collections.abc import Iterable
 from urllib.parse import urlparse
 
 from loguru import logger
 
+from llm_engineering.domain.types import SourceSystem
+
 from .base import BaseApi
 from .fedgov_api import FedGovApi
+from .fraser_api import FraserApi
 
 _LEADING_WWW = re.compile(r"^www\.", re.IGNORECASE)
 
@@ -28,12 +32,35 @@ class ApiDispatcher:
     def build(cls) -> "ApiDispatcher":
         return cls()
 
+    @classmethod
+    def from_sources(cls, sources: Iterable[str]) -> "ApiDispatcher":
+        """Build from SourceSystem values, as the pipeline config names them.
+
+        This is what lets one pipeline serve both corpora: the config says
+        `sources: [fed_gov]` or `sources: [fraser]`, and the steps need no
+        knowledge of which is which.
+
+        An unknown name raises rather than being skipped. A typo in the
+        config would otherwise produce an empty dispatcher and a run that
+        reports "0 new documents" as a success.
+        """
+        dispatcher = cls()
+        for name in sources:
+            register = _REGISTRARS.get(SourceSystem(name))
+            if register is None:
+                raise ValueError(f"No API registered for source {name!r}")
+            register(dispatcher)
+        return dispatcher
+
     def register(self, domain: str, api: BaseApi) -> "ApiDispatcher":
         self._apis[_host(domain)] = api
         return self
 
     def register_fedgov(self) -> "ApiDispatcher":
         return self.register(FedGovApi.domain, FedGovApi())
+
+    def register_fraser(self) -> "ApiDispatcher":
+        return self.register(FraserApi.domain, FraserApi())
 
     def get_api(self, url: str) -> BaseApi | None:
         """The source that owns this URL, or None.
@@ -52,6 +79,14 @@ class ApiDispatcher:
 
     def __len__(self) -> int:
         return len(self._apis)
+
+
+#: SourceSystem to the fluent registrar that adds it. Defined after the class
+#: because the values are unbound methods of it.
+_REGISTRARS = {
+    SourceSystem.FED_GOV: ApiDispatcher.register_fedgov,
+    SourceSystem.FRASER: ApiDispatcher.register_fraser,
+}
 
 
 def _host(url: str) -> str:

@@ -3,6 +3,11 @@
 # ZenML 0.74's DockerSettings rejects. The local orchestrator needs neither.
 
 parameters:
+  # federalreserve.gov only. FRASER runs separately, from
+  # fraser_data_etl.yaml, into the same two collections. The corpora are not
+  # merged -- `source` distinguishes the rows and precedence is a
+  # retrieval-time decision, which keeps it reversible.
+  sources: [fed_gov]
   # Responses are cached here, so re-runs and offline development are free.
   cache_dir: temp/http_cache
   # The press feed is always refetched regardless; this forces index pages too.

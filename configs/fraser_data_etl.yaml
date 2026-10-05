@@ -1,0 +1,25 @@
+# FRASER (St. Louis Fed), the secondary corpus. Same pipeline as
+# fed_data_etl.yaml, same two collections -- only `sources` differs.
+#
+# Why a separate run rather than one config listing both: the two sources
+# have nothing in common operationally. fed.gov is unauthenticated and
+# changes monthly; FRASER needs an API key, is metered at 30 req/min, and
+# its historical series essentially never changes. Running them together
+# means a FRASER 401 breaks the monthly fed.gov sync.
+#
+# Needs FED_API_KEY in .env.
+
+parameters:
+  sources: [fraser]
+  cache_dir: temp/http_cache
+  # Title 677 is 11 API calls. Cheap enough to always refetch, and a cached
+  # last page can never show a new meeting.
+  force: true
+  # FRASER's whole value is the early record -- it reaches back to
+  # 1933-07-20, where fed.gov's archive starts 1936-03-18 -- and the clean
+  # pre-extracted text for documents fed.gov only has as scans. All 581
+  # documents have a text_url, so there is no PDF parsing and no reason to
+  # bound the range the way fed.gov's 15-40 GB forces.
+  year_from: null
+  year_to: null
+  limit: null
