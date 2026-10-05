@@ -24,6 +24,9 @@ class Settings(BaseSettings):
 
     FED_API_KEY: str | None = None
 
+    # Financial Modeling Prep API key (FMP earnings ETL)
+    FMP_API_KEY: str | None = None
+
     # --- Required settings when deploying the code. ---
     # --- Otherwise, default values values work fine. ---
 

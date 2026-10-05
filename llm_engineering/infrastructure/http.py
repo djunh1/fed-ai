@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from pathlib import Path
 import httpx
 import hashlib
@@ -48,7 +49,17 @@ def get(
     cache_dir: Path | None = None,  # None = no caching
     force: bool = False,
     limiter: "RateLimiter | None" = None,  # None = unthrottled
+    retry_statuses: Collection[int] = (429,),
 ) -> bytes:
+    """GET with a disk cache, a token-bucket throttle and bounded retries.
+
+    `retry_statuses` lists the 4xx codes worth retrying on top of every 5xx,
+    which is always retried. The default is 429 alone, which is what fed.gov
+    and FRASER need. FMP signals throttling with 401 as well as 429 -- the
+    same key returns 200, then 401 under load, then 200 again -- so that
+    caller passes (401, 429). Passing a code here does not change what a
+    final failure raises: raise_for_status() still fires after MAX_ATTEMPTS.
+    """
 
     # Read cache
     if cache_dir is not None:
@@ -74,7 +85,7 @@ def get(
             time.sleep(2 ** attempt)
             continue
 
-        retryable = response.status_code == 429 or response.status_code >= 500
+        retryable = response.status_code in retry_statuses or response.status_code >= 500
 
         if not retryable or last_attempt:
             break

@@ -39,6 +39,10 @@ dependencies = [
     "uvicorn>=0.30.6,<0.31.0",
     "opik>=0.2.2,<0.3.0",
     "pypdf>=6.19.0",
+    # FMP earnings ETL: parquet snapshots. Both already resolve transitively
+    # via `datasets`; declared here so the pins are ours.
+    "pandas>=2.2,<3.0",
+    "pyarrow>=15,<26",
 ]
 
 [dependency-groups]

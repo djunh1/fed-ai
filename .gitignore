@@ -17,3 +17,6 @@ docs
 
 /temp
 /teaching 
+
+# Parquet snapshots written by the FMP earnings ETL
+/data
