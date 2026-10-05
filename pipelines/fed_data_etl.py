@@ -8,6 +8,7 @@ def fed_data_etl(
     sources: list[str],
     cache_dir: str | None = None,
     force: bool = False,
+    incremental: bool = False,
     year_from: int | None = None,
     year_to: int | None = None,
     limit: int | None = None,
@@ -25,7 +26,9 @@ def fed_data_etl(
     the manifest step's URL list, so ZenML orders them without an explicit
     `after=`. Both are idempotent, so re-running is the resume path.
     """
-    document_urls = build_fed_manifest(sources=sources, cache_dir=cache_dir, force=force)
+    document_urls = build_fed_manifest(
+        sources=sources, cache_dir=cache_dir, force=force, incremental=incremental
+    )
     last_step = extract_fed_text(
         document_urls=document_urls,
         sources=sources,

@@ -45,9 +45,18 @@ class FraserApi(BaseApi):
         self._client = client
 
     def iter_documents(
-        self, *, cache_dir: Path | None = None, force: bool = False
+        self,
+        *,
+        cache_dir: Path | None = None,
+        force: bool = False,
+        incremental: bool = False,
     ) -> Iterator[FedSourceDocument]:
         """Every FOMC record in title 677 that is an actual document.
+
+        `incremental` is accepted and ignored. A full pass is 11 API calls,
+        roughly 24 seconds against the 28/min limiter, so there is nothing
+        worth skipping -- and new meetings land on the last page, which a
+        partial pass would have to reach anyway.
 
         1,041 records in, ~581 out. Two filters account for the difference:
         `parse_record` drops the 9 with no pdfUrl, and UNKNOWN is dropped
@@ -59,7 +68,7 @@ class FraserApi(BaseApi):
         """
         client = self._client or fraser.FraserClient(cache_dir=cache_dir)
 
-        for record in client.iter_title_items(force=force):
+        for record in client.iter_title_items(force=force or incremental):
             document = fraser.parse_record(record)
             if document is None:
                 continue

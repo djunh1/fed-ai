@@ -175,10 +175,21 @@ _RULES: tuple[UrlRule, ...] = (
 )
 
 
-def iter_index_urls() -> Iterator[str]:
-    """Yield every FOMC index page URL, oldest first."""
-    for year in range(FIRST_HISTORICAL_YEAR, LAST_HISTORICAL_YEAR + 1):
-        yield f"{BASE}/monetarypolicy/fomchistorical{year}.htm"
+def iter_index_urls(*, incremental: bool = False) -> Iterator[str]:
+    """Yield every FOMC index page URL, oldest first.
+
+    `incremental` yields only the pages that can still change. The 85
+    fomchistorical pages are frozen -- 1936 will never gain a document -- so
+    walking them on an update run costs 85 fetches to discover nothing.
+    Only fomccalendars.htm and the press feed move.
+
+    Note this is discovery scope, not caching. An incremental run must also
+    pass force=True, or a cached calendars page replays and no new meeting
+    can ever be seen.
+    """
+    if not incremental:
+        for year in range(FIRST_HISTORICAL_YEAR, LAST_HISTORICAL_YEAR + 1):
+            yield f"{BASE}/monetarypolicy/fomchistorical{year}.htm"
     yield CALENDARS_URL
 
 
@@ -266,14 +277,22 @@ def iter_documents(
         index_urls: Iterable[str] | None = None,
         *,
         cache_dir: Path | None = None,
-        force: bool = False
+        force: bool = False,
+        incremental: bool = False,
 ) -> Iterator[FedSourceDocument]:
 
     seen: set[str] = set()
 
-    for index_url in iter_index_urls() if index_urls is None else index_urls:
+    pages = iter_index_urls(incremental=incremental) if index_urls is None else index_urls
+    # An incremental run visits only pages that can still change, so a cache
+    # hit there is always wrong -- it replays the last run and no new meeting
+    # can ever appear. Implying force removes the chance of configuring the
+    # cheap path and the stale path independently.
+    fetch_force = force or incremental
+
+    for index_url in pages:
         try:
-            html = get(index_url, cache_dir=cache_dir, force=force)
+            html = get(index_url, cache_dir=cache_dir, force=fetch_force)
         except (httpx.HTTPStatusError, httpx.TransportError) as exc:
             logger.warning(f"Skipping index page {index_url}: {exc!r}")
             continue

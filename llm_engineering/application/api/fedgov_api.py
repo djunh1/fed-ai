@@ -23,16 +23,26 @@ class FedGovApi(BaseApi):
     domain = fedgov.BASE
 
     def iter_documents(
-        self, *, cache_dir: Path | None = None, force: bool = False
+        self,
+        *,
+        cache_dir: Path | None = None,
+        force: bool = False,
+        incremental: bool = False,
     ) -> Iterator[FedSourceDocument]:
         """Index-page documents, then press-feed statements.
 
         The press feed is always fetched with force=True: it is the one file
         in this pipeline that changes, and a cached copy turns an incremental
         run into a no-op.
+
+        `incremental` narrows the index pages to fomccalendars.htm alone. The
+        85 fomchistorical pages are frozen, so an update run spends 86
+        fetches to find nothing; this takes that to one. A full pass is still
+        the right call after widening the rules, which is when a page that
+        has not changed can still yield documents it did not before.
         """
         return itertools.chain(
-            fedgov.iter_documents(cache_dir=cache_dir, force=force),
+            fedgov.iter_documents(cache_dir=cache_dir, force=force, incremental=incremental),
             fedgov.fetch_press_index(cache_dir=cache_dir, force=True),
         )
 

@@ -69,6 +69,9 @@ run-fed-data-etl = "uv run python -m tools.run --run-etl --no-cache --etl-config
 # Same pipeline, the other corpus. Separate run so a FRASER 401 cannot break
 # the fed.gov sync. Needs FED_API_KEY.
 run-fraser-data-etl = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename fraser_data_etl.yaml"
+# The monthly update: 2 fetches instead of 86, because the fomchistorical
+# pages are frozen.
+run-fed-data-etl-update = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename fed_data_etl_incremental.yaml"
 
 run-feature-engineering-pipeline = "uv run python -m tools.run --no-cache --run-feature-engineering"
 run-generate-instruct-datasets-pipeline = "uv run python -m tools.run --no-cache --run-generate-instruct-datasets"

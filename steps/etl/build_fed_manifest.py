@@ -15,6 +15,7 @@ def build_fed_manifest(
     sources: list[str],
     cache_dir: str | None = None,
     force: bool = False,
+    incremental: bool = False,
 ) -> Annotated[list[str], "document_urls"]:
     """Enumerate every known FOMC document and store its metadata.
 
@@ -27,6 +28,11 @@ def build_fed_manifest(
     [fraser]. Rows carry `source`, so the two never need merging -- precedence
     is a retrieval-time decision, taken downstream where it stays reversible.
 
+    `incremental` is the monthly-update switch: it narrows discovery to the
+    pages that can still change, taking fed.gov from 86 fetches to 2. Leave
+    it off after widening the classification rules -- a page that has not
+    changed can still yield documents it did not match before.
+
     Idempotent by pre-filtering on URLs already in Mongo. NoSQLBaseDocument
     has no upsert, so the alternative would be duplicate inserts on every run.
     """
@@ -37,7 +43,9 @@ def build_fed_manifest(
 
     discovered: dict[str, FedSourceDocument] = {}
     for api in dispatcher.sources():
-        for document in api.iter_documents(cache_dir=cache, force=force):
+        for document in api.iter_documents(
+            cache_dir=cache, force=force, incremental=incremental
+        ):
             discovered.setdefault(document.url, document)
 
     # Deliberately every stored URL, not just this run's sources. URLs are
@@ -60,7 +68,8 @@ def build_fed_manifest(
     urls = sorted(discovered)
     step_context = get_step_context()
     step_context.add_output_metadata(
-        output_name="document_urls", metadata=_get_metadata(sources, discovered, known, new)
+        output_name="document_urls",
+        metadata=_get_metadata(sources, incremental, discovered, known, new),
     )
 
     return urls
@@ -82,13 +91,14 @@ def _to_document(source: FedSourceDocument) -> FedDocument:
 
 def _get_metadata(
     sources: list[str],
+    incremental: bool,
     discovered: dict[str, FedSourceDocument],
     known: set[str],
     new: list[FedSourceDocument],
 ) -> dict:
     dates = [doc.meeting_date for doc in discovered.values()]
     return {
-        "query": {"sources": sources},
+        "query": {"sources": sources, "incremental": incremental},
         "retrieved": {
             "discovered": len(discovered),
             "already_stored": len(known),

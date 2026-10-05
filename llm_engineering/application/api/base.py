@@ -19,9 +19,19 @@ class BaseApi(ABC):
 
     @abstractmethod
     def iter_documents(
-        self, *, cache_dir: Path | None = None, force: bool = False
+        self,
+        *,
+        cache_dir: Path | None = None,
+        force: bool = False,
+        incremental: bool = False,
     ) -> Iterator[FedSourceDocument]:
-        """Yield every document this source knows about. Metadata only."""
+        """Yield every document this source knows about. Metadata only.
+
+        `incremental` asks the source to skip whatever cannot have changed.
+        It is a hint, not a contract: a source with no cheap update path is
+        free to ignore it and do a full pass, because the manifest step
+        dedupes on stored URLs either way.
+        """
 
     @abstractmethod
     def fetch(self, url: str, *, cache_dir: Path | None = None) -> bytes:

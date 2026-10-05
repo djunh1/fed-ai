@@ -1,0 +1,26 @@
+# The monthly-update run for federalreserve.gov.
+#
+# fed_data_etl.yaml walks all 86 index pages to rebuild the manifest from
+# nothing. This one walks the two that can still change -- fomccalendars.htm
+# and the press feed -- because the 85 fomchistorical pages are frozen: 1936
+# will never gain a document.
+#
+# 86 fetches becomes 2. Both run the same pipeline and are idempotent, so
+# running this one often costs almost nothing.
+#
+# Use the full config instead, not this one, after widening the rules in
+# fedgov._RULES: a page that has not changed can still yield documents it
+# did not match before. That is how the missing Tealbooks were found.
+
+parameters:
+  sources: [fed_gov]
+  cache_dir: temp/http_cache
+  force: false
+  # Implies force on the pages it does visit -- a cached calendars page
+  # replays the last run and can never show a new meeting.
+  incremental: true
+  # Unbounded: an update run only ever sees the handful of documents the
+  # live pages have gained since last time.
+  year_from: null
+  year_to: null
+  limit: null

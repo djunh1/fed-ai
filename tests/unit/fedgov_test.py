@@ -26,6 +26,7 @@ from llm_engineering.application.api.fedgov import (
     Classified,
     UrlRule,
     classify_url,
+    iter_documents,
     iter_index_urls,
     parse_index,
 )
@@ -472,3 +473,60 @@ def test_rule_provenance_is_not_part_of_equality() -> None:
     with_rule = Classified(FedInfoType.MINUTES, _date("1995-02-01"), "https://x", rule)
 
     assert bare == with_rule
+
+
+# ---------------------------------------------------------------------------
+# iter_index_urls(incremental=True) -- the monthly-update path
+# ---------------------------------------------------------------------------
+
+
+def test_incremental_yields_only_the_live_page() -> None:
+    """The 85 fomchistorical pages are frozen: 1936 will never gain a
+    document. Walking them on an update run costs 85 fetches to discover
+    nothing."""
+    assert list(iter_index_urls(incremental=True)) == [CALENDARS_URL]
+
+
+def test_incremental_is_a_strict_subset_of_full() -> None:
+    full = set(iter_index_urls())
+    incremental = set(iter_index_urls(incremental=True))
+
+    assert incremental < full
+
+
+def test_full_is_still_the_default() -> None:
+    """Defaulting to the cheap path would silently stop discovering history."""
+    assert len(list(iter_index_urls())) == len(list(iter_index_urls(incremental=False)))
+    assert len(list(iter_index_urls())) > 1
+
+
+def test_incremental_implies_force(monkeypatch) -> None:
+    """A cached calendars page replays the last run, so an incremental pass
+    that honoured the cache could never see a new meeting."""
+    seen: list[bool] = []
+
+    def fake_get(url, *, cache_dir=None, force=False, **_):
+        seen.append(force)
+        return b"<html></html>"
+
+    monkeypatch.setattr("llm_engineering.application.api.fedgov.get", fake_get)
+
+    list(iter_documents(incremental=True, force=False))
+
+    assert seen == [True]
+
+
+def test_full_pass_honours_the_cache(monkeypatch) -> None:
+    """The inverse: a full run must not force 86 pages it already has."""
+    seen: list[bool] = []
+
+    def fake_get(url, *, cache_dir=None, force=False, **_):
+        seen.append(force)
+        return b"<html></html>"
+
+    monkeypatch.setattr("llm_engineering.application.api.fedgov.get", fake_get)
+
+    list(iter_documents(incremental=False, force=False))
+
+    assert not any(seen)
+    assert len(seen) > 1
