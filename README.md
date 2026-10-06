@@ -56,6 +56,34 @@ hours; a single year is seconds once `temp/http_cache` is warm.
 Every run is idempotent — resumption is just re-running. Both steps skip what
 is already stored, so a run killed at document 3,000 picks up at 3,000.
 
+## FMP earnings to parquet
+
+A separate pipeline, `fmp_earnings_etl`, collects historical earnings
+announcements for screened US stocks from Financial Modeling Prep and writes
+one complete parquet snapshot per run. It does not use Mongo. The consumer is
+`~/dev/sip_news_data_platform`, which reads the newest file.
+
+```bash
+uv run poe run-fmp-earnings-etl          # full run, ~2,000 symbols, ~17 min
+uv run poe run-fmp-earnings-etl-update   # refresh new, stale and unresolved symbols only
+```
+
+Needs `FMP_API_KEY` in `.env` (Starter plan or above).
+
+- **Output:** `data/fmp_earnings/earnings_<UTC YYYYMMDD_HHMMSS>.parquet`, one row
+  per (ticker, date), the sister project's 15 columns plus `ingested_at`.
+  The newest file by name is the current dataset; failed runs write nothing.
+- **Universe:** the FMP screener with the sister project's floors (price $5,
+  market cap $300M, volume 200k). Change them per run in
+  `configs/fmp_earnings_etl.yaml`.
+- **Smoke run:** set `limit: 5` in a copy of the config; it takes the largest
+  market caps first.
+- **Run stats:** each step attaches metadata to its output. In the dashboard,
+  open the run, click an output node, then the Metadata tab. From Python:
+  `uv run python temp/debug_fmp_metadata.py`.
+
+Design decisions are in `docs/adr/` (local-only).
+
 ## Looking at the data
 
 ```bash

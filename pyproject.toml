@@ -76,6 +76,9 @@ run-fraser-data-etl = "uv run python -m tools.run --run-etl --no-cache --etl-con
 # The monthly update: 2 fetches instead of 86, because the fomchistorical
 # pages are frozen.
 run-fed-data-etl-update = "uv run python -m tools.run --run-etl --no-cache --etl-config-filename fed_data_etl_incremental.yaml"
+# FMP earnings to data/fmp_earnings/*.parquet. Needs FMP_API_KEY.
+run-fmp-earnings-etl = "uv run python -m tools.run --run-fmp-earnings-etl --no-cache"
+run-fmp-earnings-etl-update = "uv run python -m tools.run --run-fmp-earnings-etl --no-cache --etl-config-filename fmp_earnings_etl_incremental.yaml"
 
 run-feature-engineering-pipeline = "uv run python -m tools.run --no-cache --run-feature-engineering"
 run-generate-instruct-datasets-pipeline = "uv run python -m tools.run --no-cache --run-generate-instruct-datasets"

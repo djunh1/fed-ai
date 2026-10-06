@@ -51,15 +51,8 @@ def get(
     limiter: "RateLimiter | None" = None,  # None = unthrottled
     retry_statuses: Collection[int] = (429,),
 ) -> bytes:
-    """GET with a disk cache, a token-bucket throttle and bounded retries.
-
-    `retry_statuses` lists the 4xx codes worth retrying on top of every 5xx,
-    which is always retried. The default is 429 alone, which is what fed.gov
-    and FRASER need. FMP signals throttling with 401 as well as 429 -- the
-    same key returns 200, then 401 under load, then 200 again -- so that
-    caller passes (401, 429). Passing a code here does not change what a
-    final failure raises: raise_for_status() still fires after MAX_ATTEMPTS.
-    """
+    """GET with disk cache, throttle and retries. 5xx always retries;
+    `retry_statuses` adds 4xx codes (FMP throttles with 401)."""
 
     # Read cache
     if cache_dir is not None:

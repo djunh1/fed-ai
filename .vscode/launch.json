@@ -184,6 +184,84 @@
       "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
 
+    // ---- FMP -------------------------------------------------------------
+    {
+      // Step 0 offline; 1-2 need FMP_API_KEY. Step 1 saves a sample.
+      "name": "Debug: FmpClient",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    {
+      // Steps 0-1 offline on saved samples; step 2 needs FMP_API_KEY.
+      "name": "Debug: FmpEarningsApi (adapter)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp_api.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    {
+      // Offline. Snapshot IO, then one simulated incremental pass over the samples.
+      "name": "Debug: FMP snapshot",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp_snapshot.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    {
+      // Full run. Set `limit` in the config for a smoke run.
+      "name": "Debug: ETL pipeline — FMP earnings",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": ["--run-fmp-earnings-etl", "--no-cache"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      "name": "Debug: ETL pipeline — FMP earnings incremental",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": ["--run-fmp-earnings-etl", "--no-cache", "--etl-config-filename", "fmp_earnings_etl_incremental.yaml"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // Reads metadata back from the last FMP run via the ZenML client.
+      "name": "Debug: FMP run metadata",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp_metadata.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
     // ---- tests -----------------------------------------------------------
     {
       "name": "Debug: pytest (current file)",

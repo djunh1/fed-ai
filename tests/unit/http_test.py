@@ -235,8 +235,7 @@ def test_unparseable_retry_after_falls_back_to_backoff(fake_get, sleeps) -> None
 
 
 def test_listed_status_is_retried(fake_get, sleeps) -> None:
-    """FMP throttles with 401, so a caller can opt that code into the retry
-    loop. Same schedule as any other retryable status."""
+    """FMP throttles with 401; callers can opt it in."""
     fake = fake_get(_response(401))
 
     with pytest.raises(httpx.HTTPStatusError):
@@ -254,7 +253,7 @@ def test_listed_status_recovers_when_a_retry_succeeds(fake_get, sleeps) -> None:
 
 
 def test_unlisted_429_is_not_retried_when_the_list_omits_it(fake_get, sleeps) -> None:
-    """The parameter replaces the default rather than extending it."""
+    """Replaces the default, does not extend it."""
     fake = fake_get(_response(429))
 
     with pytest.raises(httpx.HTTPStatusError):
@@ -265,7 +264,6 @@ def test_unlisted_429_is_not_retried_when_the_list_omits_it(fake_get, sleeps) ->
 
 
 def test_server_errors_are_retried_regardless_of_the_list(fake_get, sleeps) -> None:
-    """5xx is always retryable; retry_statuses only governs 4xx."""
     fake = fake_get(_response(503))
 
     with pytest.raises(httpx.HTTPStatusError):

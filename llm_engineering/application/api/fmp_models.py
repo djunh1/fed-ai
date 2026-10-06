@@ -1,19 +1,6 @@
-"""The record the FMP earnings pipeline passes between layers.
-
-One announcement, one record, keyed by (ticker, date). The field list is the
-sister project's OUTPUT_COLUMNS in the same order, so the parquet this
-pipeline writes is column-for-column what `sip_news_data_platform` already
-produces for itself -- the consumer needs no mapping step.
-
-Deliberately not pydantic and not a Mongo document: nothing here is stored
-row-by-row. Records live in memory for one symbol at a time, then become a
-pandas frame at the snapshot boundary (application/fmp_snapshot.py). A frozen
-dataclass with slots is the cheapest thing that is still typed, hashable and
-safe to pass through pure functions that return modified copies.
-
-Kept separate from models.py on purpose: FedSourceDocument is typed to FOMC
-documents (url, meeting_date, info_type), and this record shares none of that.
-"""
+"""One earnings announcement, keyed by (ticker, date). Same columns as the
+sister project's OUTPUT_COLUMNS. Frozen dataclass, not pydantic: records are
+in-memory only and become a frame at the snapshot boundary."""
 
 import datetime
 from dataclasses import dataclass, fields
@@ -21,23 +8,19 @@ from dataclasses import dataclass, fields
 
 @dataclass(frozen=True, slots=True)
 class EarningsRecord:
-    # --- identity -----------------------------------------------------
     ticker: str
-    date: datetime.date  # announcement date, after reconciliation (ADR 0003)
+    date: datetime.date  # reconciled (ADR 0003)
 
-    # --- straight from v3 historical/earning_calendar -----------------
-    time: str | None  # "bmo", "amc", occasionally "dmh" or missing
-    timing_label: str  # English for `time`; "Unspecified" when not bmo/amc
-    date_corrected: bool  # True when the stable endpoint moved `date`
+    time: str | None  # "bmo", "amc", sometimes "dmh" or missing
+    timing_label: str  # "Unspecified" unless bmo/amc
+    date_corrected: bool
     fiscal_date_ending: datetime.date | None
-    eps_actual: float | None  # None for a scheduled, not yet reported, quarter
+    eps_actual: float | None  # None until reported
     eps_estimated: float | None
     revenue_actual: float | None
     revenue_estimated: float | None
 
-    # --- derived, filled by fmp.with_derived_metrics (ADR 0007) ---------
-    # Defaulted so parse_earnings() can build a record before the metrics
-    # exist; the derivation step returns a replace()d copy with them set.
+    # Derived (ADR 0007); set later via dataclasses.replace().
     eps_surprise: float | None = None
     eps_surprise_pct: float | None = None
     revenue_surprise: float | None = None
@@ -45,10 +28,8 @@ class EarningsRecord:
     sales_growth_yoy_pct: float | None = None
 
 
-#: The parquet contract, derived from the class so the two cannot drift.
-#: Matches the sister project's OUTPUT_COLUMNS exactly, in order.
+#: Parquet contract, derived from the class so they cannot drift.
 OUTPUT_COLUMNS: tuple[str, ...] = tuple(f.name for f in fields(EarningsRecord))
 
-#: `ingested_at` is a frame-level column, stamped once per run at the
-#: snapshot boundary, so it is not a field on the record.
+#: ingested_at is stamped per run on the frame, not per record.
 SNAPSHOT_COLUMNS: tuple[str, ...] = OUTPUT_COLUMNS + ("ingested_at",)

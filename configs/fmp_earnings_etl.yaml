@@ -1,0 +1,18 @@
+# FMP earnings, full run: every screened symbol, baseline ignored.
+# ~2,000 symbols x 2 calls at 250/min, ~17 minutes. Needs FMP_API_KEY.
+# Output: data/fmp_earnings/earnings_<UTC timestamp>.parquet (ADR 0002).
+
+parameters:
+  # Universe screen (ADR 0006). Sister project defaults; change per run.
+  min_price: 5.0
+  min_market_cap: 300000000
+  min_volume: 200000
+  exchanges: [NYSE, NASDAQ, AMEX]
+
+  data_dir: data/fmp_earnings
+  incremental: false
+  stale_after_days: 75
+  # Set to e.g. 5 for a smoke run; takes the largest market caps first.
+  limit: null
+  # Above this share of failed symbols, nothing is written.
+  max_failure_pct: 5.0

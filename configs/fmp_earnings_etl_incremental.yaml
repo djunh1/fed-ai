@@ -1,0 +1,19 @@
+# FMP earnings, incremental: refresh only new, stale and unresolved symbols
+# against the newest snapshot (ADR 0004). Falls back to a full run if none.
+# Roughly a quarter of the universe per monthly run. Needs FMP_API_KEY.
+# Output: data/fmp_earnings/earnings_<UTC timestamp>.parquet (ADR 0002).
+
+parameters:
+  # Universe screen (ADR 0006). Sister project defaults; change per run.
+  min_price: 5.0
+  min_market_cap: 300000000
+  min_volume: 200000
+  exchanges: [NYSE, NASDAQ, AMEX]
+
+  data_dir: data/fmp_earnings
+  incremental: true
+  stale_after_days: 75
+  # Set to e.g. 5 for a smoke run; takes the largest market caps first.
+  limit: null
+  # Above this share of failed symbols, nothing is written.
+  max_failure_pct: 5.0

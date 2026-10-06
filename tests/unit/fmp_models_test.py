@@ -1,7 +1,4 @@
-"""Pins the parquet contract to the sister project's OUTPUT_COLUMNS.
-
-Run: uv run pytest tests/unit/fmp_models_test.py -v
-"""
+"""Pins the parquet contract to the sister project's OUTPUT_COLUMNS."""
 
 import dataclasses
 import datetime
@@ -55,8 +52,7 @@ def test_columns_match_the_sister_project_as_a_set() -> None:
 
 
 def test_identity_columns_lead_and_derived_columns_trail() -> None:
-    """Order differs from the sister list on purpose: identity first, raw
-    fields, then derived. Pinned so a reordering is a deliberate change."""
+    """Identity first, derived last; a reorder must be deliberate."""
     assert OUTPUT_COLUMNS[:2] == ("ticker", "date")
     assert OUTPUT_COLUMNS[-5:] == (
         "eps_surprise",
@@ -86,7 +82,6 @@ def test_record_is_frozen() -> None:
 
 
 def test_replace_produces_a_new_record_with_metrics() -> None:
-    """The derivation step works by dataclasses.replace(); check it round-trips."""
     record = _record()
 
     derived = dataclasses.replace(record, eps_surprise=0.14)
