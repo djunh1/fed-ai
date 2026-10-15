@@ -5,7 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 from typing_extensions import Annotated
-from zenml import get_step_context, step
+from zenml import ArtifactConfig, get_step_context, step
 from zenml.metadata.metadata_types import Path as MetaPath
 from zenml.metadata.metadata_types import StorageSize
 
@@ -27,7 +27,7 @@ def extract_fmp_earnings(
     stale_after_days: int = 75,
     limit: int | None = None,
     max_failure_pct: float = 5.0,
-) -> Annotated[str, "snapshot_path"]:
+) -> Annotated[str, ArtifactConfig(name="fmp_earnings_snapshot", tags=["fmp", "earnings", "parquet"])]:
     """Fetch earnings for the symbols that need it and write a full snapshot (ADR 0002, 0004).
 
     Writes nothing if more than `max_failure_pct` of fetches fail, so the
@@ -88,7 +88,7 @@ def extract_fmp_earnings(
     logger.info(f"Wrote {path} ({len(merged)} rows)")
 
     get_step_context().add_output_metadata(
-        output_name="snapshot_path",
+        output_name="fmp_earnings_snapshot",
         metadata=_get_metadata(
             incremental=incremental,
             stale_after_days=stale_after_days,

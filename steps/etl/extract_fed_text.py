@@ -4,7 +4,7 @@ import httpx
 from loguru import logger
 from tqdm import tqdm
 from typing_extensions import Annotated
-from zenml import get_step_context, step
+from zenml import ArtifactConfig, get_step_context, step
 
 from llm_engineering.application.api.dispatcher import ApiDispatcher
 from llm_engineering.domain.documents import FedDocument, FedTextDocument
@@ -18,7 +18,7 @@ def extract_fed_text(
     year_to: int | None = None,
     cache_dir: str | None = None,
     limit: int | None = None,
-) -> Annotated[int, "extracted_count"]:
+) -> Annotated[int, ArtifactConfig(name="fed_text_extraction", tags=["fed", "text", "mongo"])]:
     """Download and extract text for documents not already extracted.
 
     This is the expensive half -- fed.gov's full corpus is 15-40 GB.
@@ -102,7 +102,7 @@ def extract_fed_text(
 
     step_context = get_step_context()
     step_context.add_output_metadata(
-        output_name="extracted_count",
+        output_name="fed_text_extraction",
         metadata=_get_metadata(sources, pending, extracted, empty, failed, year_from, year_to),
     )
 

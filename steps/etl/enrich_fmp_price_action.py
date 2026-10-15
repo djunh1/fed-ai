@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 from typing_extensions import Annotated
-from zenml import get_step_context, step
+from zenml import ArtifactConfig, get_step_context, step
 from zenml.metadata.metadata_types import Path as MetaPath
 from zenml.metadata.metadata_types import StorageSize
 
@@ -31,7 +31,7 @@ def enrich_fmp_price_action(
     price_action_to: str | None = None,
     limit: int | None = None,
     max_failure_pct: float = 5.0,
-) -> Annotated[str, "enriched_path"]:
+) -> Annotated[str, ArtifactConfig(name="fmp_enriched_snapshot", tags=["fmp", "price_action", "parquet"])]:
     """Join price action onto the earnings snapshot and write an enriched snapshot (ADR 0008).
 
     Incremental re-uses priced rows from the newest enriched file. Writes
@@ -100,7 +100,7 @@ def enrich_fmp_price_action(
     logger.info(f"Wrote {path} ({len(enriched)} rows)")
 
     get_step_context().add_output_metadata(
-        output_name="enriched_path",
+        output_name="fmp_enriched_snapshot",
         metadata={
             "query": {
                 "incremental": incremental,

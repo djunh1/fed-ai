@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 from typing_extensions import Annotated
-from zenml import get_step_context, step
+from zenml import ArtifactConfig, get_step_context, step
 
 from llm_engineering.application.api.dispatcher import ApiDispatcher
 from llm_engineering.application.api.models import FedSourceDocument
@@ -16,7 +16,7 @@ def build_fed_manifest(
     cache_dir: str | None = None,
     force: bool = False,
     incremental: bool = False,
-) -> Annotated[list[str], "document_urls"]:
+) -> Annotated[list[str], ArtifactConfig(name="fed_manifest", tags=["fed", "manifest", "mongo"])]:
     """Enumerate every known FOMC document and store its metadata.
 
     Metadata only -- roughly 90 fetches for fed.gov's ~5,200 documents, 11
@@ -68,7 +68,7 @@ def build_fed_manifest(
     urls = sorted(discovered)
     step_context = get_step_context()
     step_context.add_output_metadata(
-        output_name="document_urls",
+        output_name="fed_manifest",
         metadata=_get_metadata(sources, incremental, discovered, known, new),
     )
 

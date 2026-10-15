@@ -1,5 +1,5 @@
 from typing_extensions import Annotated
-from zenml import get_step_context, step
+from zenml import ArtifactConfig, get_step_context, step
 
 from llm_engineering.application.api.fmp_api import FmpEarningsApi
 
@@ -11,7 +11,7 @@ def build_fmp_universe(
     min_volume: int,
     exchanges: list[str],
     symbols: list[str] | None = None,
-) -> Annotated[list[str], "symbols"]:
+) -> Annotated[list[str], ArtifactConfig(name="fmp_universe", tags=["fmp", "universe"])]:
     """Screened symbols, largest market cap first. One FMP call (ADR 0006).
 
     `symbols`, if set, replaces the screen (QA runs, re-running named tickers).
@@ -19,7 +19,7 @@ def build_fmp_universe(
     if symbols:
         chosen = list(dict.fromkeys(s.strip().upper() for s in symbols))
         get_step_context().add_output_metadata(
-            output_name="symbols",
+            output_name="fmp_universe",
             metadata={"query": {"source": "config symbols"}, "retrieved": {"symbols": len(chosen), "top_10": chosen[:10]}},
         )
         return chosen
@@ -34,7 +34,7 @@ def build_fmp_universe(
     )
 
     get_step_context().add_output_metadata(
-        output_name="symbols",
+        output_name="fmp_universe",
         metadata={
             "query": {
                 "source": "screener",
