@@ -35,6 +35,22 @@ class FakeClient:
             raise self.stable_error
         return self.stable.get(symbol, [])
 
+    # price action
+    bars: dict = {}
+    caps: list = []
+
+    def prices(self, symbol, start, end) -> dict:
+        self.calls.append(("prices", symbol, start, end))
+        return {"historical": self.bars.get(symbol, [])}
+
+    def market_caps(self, symbol, start, end) -> list[dict]:
+        self.calls.append(("caps", symbol, start, end))
+        return [c for c in self.caps if start.isoformat() <= c["date"] <= end.isoformat()]
+
+    def profile(self, symbol) -> list[dict]:
+        self.calls.append(("profile", symbol))
+        return [{"sector": "Technology", "industry": "Software"}]
+
 
 # --- construction -------------------------------------------------------------
 
@@ -132,3 +148,52 @@ def test_fetch_ticker_is_the_requested_symbol() -> None:
     [record] = FmpEarningsApi(client).fetch_earnings("BRK-B")
 
     assert record.ticker == "BRK-B"
+
+
+# --- fetch_price_action ---------------------------------------------------------
+
+
+def _bar(day: str, close: float) -> dict:
+    return {"date": day, "open": close, "high": close, "low": close, "close": close, "volume": 1}
+
+
+def test_price_action_window_and_calls() -> None:
+    client = FakeClient()
+    client.bars = {"A": [_bar("2026-07-30", 10), _bar("2026-07-29", 9)]}
+    client.caps = [{"date": "2026-07-30", "marketCap": 1e9}]
+    today = datetime.date(2026, 10, 6)
+
+    rows = FmpEarningsApi(client).fetch_price_action("A", [(datetime.date(2026, 7, 29), "amc")], today=today)
+
+    assert client.calls[0] == ("prices", "A", datetime.date(2026, 6, 29), today)
+    assert ("profile", "A") in client.calls
+    assert [c[0] for c in client.calls].count("caps") == 1
+    [row] = rows
+    assert (row["ticker"], row["date"], row["time"]) == ("A", datetime.date(2026, 7, 29), "amc")
+    assert row["date_0d"] == datetime.date(2026, 7, 30) and row["market_capitalization"] == 1e9
+    assert row["sector"] == "Technology"
+
+
+def test_price_action_long_span_chunks_market_caps() -> None:
+    client = FakeClient()
+    client.bars = {"A": [_bar("2016-02-01", 1)]}
+
+    FmpEarningsApi(client).fetch_price_action(
+        "A", [(datetime.date(2016, 1, 28), "amc"), (datetime.date(2026, 7, 29), "amc")], today=datetime.date(2026, 10, 6)
+    )
+
+    assert [c[0] for c in client.calls].count("caps") == 6
+
+
+def test_price_action_no_bars_returns_empty_and_skips_other_calls() -> None:
+    client = FakeClient()
+
+    assert FmpEarningsApi(client).fetch_price_action("A", [(datetime.date(2026, 7, 29), "amc")], today=datetime.date(2026, 10, 6)) == []
+    assert [c[0] for c in client.calls] == ["prices"]
+
+
+def test_price_action_no_keys_no_calls() -> None:
+    client = FakeClient()
+
+    assert FmpEarningsApi(client).fetch_price_action("A", [], today=datetime.date(2026, 10, 6)) == []
+    assert client.calls == []

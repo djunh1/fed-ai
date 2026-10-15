@@ -585,3 +585,34 @@ def test_dedupe_sorts_newest_first_and_keeps_first_seen() -> None:
     dup = _quarter("2026-03-28", 9.0, date="2026-04-30")
 
     assert dedupe([a, b, dup]) == [b, a]
+
+
+# --- price action endpoints -------------------------------------------------------
+
+
+def test_prices_request(fake_get) -> None:
+    fake = fake_get(b"{}")
+
+    FmpClient(KEY).prices("BRK-B", datetime.date(2016, 1, 1), datetime.date(2026, 10, 6))
+
+    call = fake.calls[0]
+    assert call["url"] == f"{fmp.V3_BASE}/historical-price-full/BRK-B"
+    assert call["params"] == {"from": "2016-01-01", "to": "2026-10-06", "apikey": KEY}
+
+
+def test_market_caps_request(fake_get) -> None:
+    fake = fake_get(b"[]")
+
+    FmpClient(KEY).market_caps("AAPL", datetime.date(2024, 1, 1), datetime.date(2025, 12, 31))
+
+    call = fake.calls[0]
+    assert call["url"] == f"{fmp.V3_BASE}/historical-market-capitalization/AAPL"
+    assert call["params"] == {"from": "2024-01-01", "to": "2025-12-31", "limit": 5000, "apikey": KEY}
+
+
+def test_profile_request(fake_get) -> None:
+    fake = fake_get(b"[]")
+
+    FmpClient(KEY).profile("AAPL")
+
+    assert fake.calls[0]["url"] == f"{fmp.V3_BASE}/profile/AAPL"

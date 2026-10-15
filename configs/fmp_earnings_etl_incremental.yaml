@@ -13,7 +13,18 @@ parameters:
   data_dir: data/fmp_earnings
   incremental: true
   stale_after_days: 75
-  # Set to e.g. 5 for a smoke run; takes the largest market caps first.
+  # Caps symbols per step, largest market cap first. In a full run this
+  # writes a partial snapshot as the newest; use a separate data_dir (see _qa).
   limit: null
   # Above this share of failed symbols, nothing is written.
   max_failure_pct: 5.0
+
+  # Optional: replace the screen with named tickers.
+  symbols: null
+
+  # Price action (ADR 0008). Rows before this date are not priced.
+  enriched_dir: data/fmp_enriched
+  price_action_from: "2016-01-01"
+  # Optional: last announcement date in the enriched file. Returns still use
+  # later prices. Earnings snapshot is unaffected. null = through today.
+  price_action_to: null

@@ -10,8 +10,20 @@ def build_fmp_universe(
     min_market_cap: float,
     min_volume: int,
     exchanges: list[str],
+    symbols: list[str] | None = None,
 ) -> Annotated[list[str], "symbols"]:
-    """Screened symbols, largest market cap first. One FMP call (ADR 0006)."""
+    """Screened symbols, largest market cap first. One FMP call (ADR 0006).
+
+    `symbols`, if set, replaces the screen (QA runs, re-running named tickers).
+    """
+    if symbols:
+        chosen = list(dict.fromkeys(s.strip().upper() for s in symbols))
+        get_step_context().add_output_metadata(
+            output_name="symbols",
+            metadata={"query": {"source": "config symbols"}, "retrieved": {"symbols": len(chosen), "top_10": chosen[:10]}},
+        )
+        return chosen
+
     stats: dict = {}
     symbols = FmpEarningsApi().universe(
         min_price=min_price,
@@ -25,6 +37,7 @@ def build_fmp_universe(
         output_name="symbols",
         metadata={
             "query": {
+                "source": "screener",
                 "min_price": min_price,
                 "min_market_cap": min_market_cap,
                 "min_volume": min_volume,

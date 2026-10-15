@@ -1,6 +1,9 @@
 """FMP earnings as one source: universe in, records per symbol out. No logic
 of its own; fmp.py holds it. Not a BaseApi: no URLs, no Mongo (ADR 0001)."""
 
+import datetime
+
+from llm_engineering.application import price_action
 from llm_engineering.application.api import fmp
 from llm_engineering.application.api.fmp_models import EarningsRecord
 
@@ -43,3 +46,35 @@ class FmpEarningsApi:
         authoritative = fmp.parse_stable_dates(self.client.earnings_stable(symbol))
         records = fmp.apply_authoritative_dates(records, authoritative)
         return fmp.dedupe(fmp.with_derived_metrics(records))
+
+    def fetch_price_action(
+        self,
+        symbol: str,
+        keys: list[tuple[datetime.date, str | None]],
+        *,
+        today: datetime.date,
+    ) -> list[dict]:
+        """Price action for each (date, time) of one symbol, as dicts keyed like
+        the enriched frame. Empty if FMP has no prices for the span.
+
+        Calls: 1 prices + 1 profile + 1 market cap per 2 years of span.
+        """
+        if not keys:
+            return []
+        dates = [d for d, _ in keys]
+        start = min(dates) - datetime.timedelta(days=price_action.LOOKBACK_DAYS)
+        end = min(max(dates) + datetime.timedelta(days=price_action.lookforward_days()), today)
+
+        bars = price_action.parse_bars(self.client.prices(symbol, start, end))
+        if not bars:
+            return []
+        profile = price_action.parse_profile(self.client.profile(symbol))
+        cap_rows: list[dict] = []
+        for window_start, window_end in price_action.market_cap_windows(start, end):
+            cap_rows.extend(self.client.market_caps(symbol, window_start, window_end))
+        caps = price_action.parse_market_caps(cap_rows)
+
+        return [
+            {"ticker": symbol, "date": d, "time": t, **price_action.price_action_for(bars, caps, profile, d, t)}
+            for d, t in keys
+        ]

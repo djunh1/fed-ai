@@ -1,6 +1,6 @@
 from zenml import pipeline
 
-from steps.etl import build_fmp_universe, extract_fmp_earnings
+from steps.etl import build_fmp_universe, enrich_fmp_price_action, extract_fmp_earnings
 
 
 @pipeline
@@ -14,16 +14,33 @@ def fmp_earnings_etl(
     stale_after_days: int = 75,
     limit: int | None = None,
     max_failure_pct: float = 5.0,
+    symbols: list[str] | None = None,
+    enriched_dir: str = "data/fmp_enriched",
+    price_action_from: str = "2016-01-01",
+    price_action_to: str | None = None,
 ) -> str:
-    """Screen the universe, then fetch earnings into a parquet snapshot. No Mongo (ADR 0001)."""
-    symbols = build_fmp_universe(
-        min_price=min_price, min_market_cap=min_market_cap, min_volume=min_volume, exchanges=exchanges
-    )
-    last_step = extract_fmp_earnings(
+    """Screen the universe, fetch earnings, then add price action. Parquet only (ADR 0001, 0008)."""
+    universe = build_fmp_universe(
+        min_price=min_price,
+        min_market_cap=min_market_cap,
+        min_volume=min_volume,
+        exchanges=exchanges,
         symbols=symbols,
+    )
+    snapshot_path = extract_fmp_earnings(
+        symbols=universe,
         data_dir=data_dir,
         incremental=incremental,
         stale_after_days=stale_after_days,
+        limit=limit,
+        max_failure_pct=max_failure_pct,
+    )
+    last_step = enrich_fmp_price_action(
+        snapshot_path=snapshot_path,
+        enriched_dir=enriched_dir,
+        incremental=incremental,
+        price_action_from=price_action_from,
+        price_action_to=price_action_to,
         limit=limit,
         max_failure_pct=max_failure_pct,
     )

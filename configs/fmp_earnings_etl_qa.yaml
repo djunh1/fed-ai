@@ -1,0 +1,17 @@
+# QA sample: named tickers, full run, written to data/fmp_qa/ so the real
+# snapshots are untouched. NFLX and DRVN have rows in data/sample/sample_data.csv.
+
+parameters:
+  min_price: 5.0
+  min_market_cap: 300000000
+  min_volume: 200000
+  exchanges: [NYSE, NASDAQ, AMEX]
+  symbols: [NFLX, JPM, WMT, AAPL, nue, AMD]
+
+  data_dir: data/fmp_qa/earnings
+  enriched_dir: data/fmp_qa/enriched
+  incremental: false
+  stale_after_days: 75
+  limit: null
+  max_failure_pct: 5.0
+  price_action_from: "2016-01-01"

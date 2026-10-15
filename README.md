@@ -64,8 +64,9 @@ one complete parquet snapshot per run. It does not use Mongo. The consumer is
 `~/dev/sip_news_data_platform`, which reads the newest file.
 
 ```bash
-uv run poe run-fmp-earnings-etl          # full run, ~2,000 symbols, ~17 min
-uv run poe run-fmp-earnings-etl-update   # refresh new, stale and unresolved symbols only
+uv run poe run-fmp-earnings-etl          # full run: earnings, then price action
+uv run poe run-fmp-earnings-etl-update   # refresh only what changed
+uv run poe run-fmp-earnings-etl-qa       # six named tickers into data/fmp_qa/
 ```
 
 Needs `FMP_API_KEY` in `.env` (Starter plan or above).
@@ -73,16 +74,27 @@ Needs `FMP_API_KEY` in `.env` (Starter plan or above).
 - **Output:** `data/fmp_earnings/earnings_<UTC YYYYMMDD_HHMMSS>.parquet`, one row
   per (ticker, date), the sister project's 15 columns plus `ingested_at`.
   The newest file by name is the current dataset; failed runs write nothing.
+- **Enriched output:** `data/fmp_enriched/enriched_<ts>.parquet`: earnings rows
+  from 2016 on plus 36 price-action columns (day-0 OHLCV, gap, N-day returns,
+  max gain and drawdown, sector, industry, market cap as of day 0). Same math
+  as the sister's `PriceActionService`, except pre-IPO rows get no anchor.
+  `price_action_from` / `price_action_to` set the announcement-date window;
+  returns near the end still use later prices.
 - **Universe:** the FMP screener with the sister project's floors (price $5,
   market cap $300M, volume 200k). Change them per run in
   `configs/fmp_earnings_etl.yaml`.
-- **Smoke run:** set `limit: 5` in a copy of the config; it takes the largest
-  market caps first.
+- **Smoke run:** use the QA config. `limit` in a full run writes a partial
+  snapshot as the newest, so point `data_dir` and `enriched_dir` elsewhere.
 - **Run stats:** each step attaches metadata to its output. In the dashboard,
   open the run, click an output node, then the Metadata tab. From Python:
   `uv run python temp/debug_fmp_metadata.py`.
 
 Design decisions are in `docs/adr/` (local-only).
+
+To browse the newest earnings snapshot in a table filterable by ticker, run
+`uv run poe view-parquet`. It opens http://127.0.0.1:8765. Mongo isn't needed.
+Day 0 and the 10/20/60-day returns are joined from the newest enriched snapshot.
+`uv run poe view-parquet-qa` shows the QA sample instead.
 
 ## Looking at the data
 

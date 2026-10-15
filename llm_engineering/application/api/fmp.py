@@ -135,6 +135,24 @@ class FmpClient:
         """Same history with authoritative dates, but no timing or fiscal period."""
         return self._get(f"{STABLE_BASE}/earnings", symbol=symbol, limit=STABLE_HISTORY_LIMIT)
 
+    def prices(self, symbol: str, start: datetime.date, end: datetime.date) -> dict:
+        """Daily OHLCV, {"symbol", "historical": [...]}, newest first."""
+        return self._get(
+            f"{V3_BASE}/historical-price-full/{_symbol_path(symbol)}",
+            **{"from": start.isoformat(), "to": end.isoformat()},
+        )
+
+    def market_caps(self, symbol: str, start: datetime.date, end: datetime.date) -> list[dict]:
+        """Daily market cap. Truncates at ~1,300 rows; callers chunk the range."""
+        return self._get(
+            f"{V3_BASE}/historical-market-capitalization/{_symbol_path(symbol)}",
+            **{"from": start.isoformat(), "to": end.isoformat(), "limit": 5000},
+        )
+
+    def profile(self, symbol: str) -> list[dict]:
+        """Company profile; sector and industry are today's values."""
+        return self._get(f"{V3_BASE}/profile/{_symbol_path(symbol)}")
+
 
 def parse_universe(records: list[dict], *, stats: dict | None = None) -> list[str]:
     """Symbols from screener rows, largest market cap first, unique.
