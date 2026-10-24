@@ -1,4 +1,4 @@
-"""Unit tests for clean_text and FedCleaningHandler. No database.
+"""Unit tests for clean_text, FedCleaningHandler and CleaningDispatcher. No database.
 
 Run: uv run pytest tests/unit/cleaning_test.py -v
 """
@@ -8,10 +8,11 @@ import datetime
 import pytest
 from pydantic import ValidationError
 
+from llm_engineering.application.preprocessing import CleaningDispatcher
 from llm_engineering.application.preprocessing.cleaning_data_handlers import FedCleaningHandler
 from llm_engineering.application.preprocessing.operations import clean_text
 from llm_engineering.domain.cleaned_documents import CleanedFedDocument
-from llm_engineering.domain.documents import FedTextDocument
+from llm_engineering.domain.documents import FedDocument, FedTextDocument
 from llm_engineering.domain.types import FedInfoType, SourceSystem
 
 # --------------------------------------------------------------------------
@@ -83,3 +84,25 @@ def test_handler_rejects_rows_that_skipped_the_join() -> None:
 
     with pytest.raises(ValidationError):
         FedCleaningHandler().clean(raw)
+
+
+# --------------------------------------------------------------------------
+# CleaningDispatcher
+# --------------------------------------------------------------------------
+
+
+def test_dispatcher_routes_fed_text_to_fed_handler() -> None:
+    assert isinstance(CleaningDispatcher.dispatch(_joined_text()), CleanedFedDocument)
+
+
+def test_dispatcher_rejects_metadata_rows() -> None:
+    document = FedDocument(
+        source=SourceSystem.FED_GOV,
+        info_type=FedInfoType.MINUTES,
+        meeting_date=datetime.datetime(1995, 2, 1),
+        title="Minutes",
+        url="u",
+    )
+
+    with pytest.raises(ValueError):
+        CleaningDispatcher.dispatch(document)

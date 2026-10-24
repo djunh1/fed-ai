@@ -10,7 +10,6 @@ class CleanedDocument(VectorBaseDocument, ABC):
     url: str
     
 
-
 class CleanedFedDocument(CleanedDocument):
     info_type: FedInfoType
     source: SourceSystem

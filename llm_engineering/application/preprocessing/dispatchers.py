@@ -3,12 +3,27 @@ from loguru import logger
 from llm_engineering.domain.base import NoSQLBaseDocument, VectorBaseDocument
 from llm_engineering.domain.types import DataCategory
 
-# 
+
+from .cleaning_data_handlers import (
+    CleaningDataHandler, 
+    FedCleaningHandler,
+)
+
+# from .chunking_data_handlers import (
+#     ChunkingDataHandler,
+# )
+
+# from .embedding_data_handlers import (
+#     EmbeddingDataHandler,
+# )
 
 class CleaningHandlerFactory:
     @staticmethod
-    def create_handler(data_category: DataCategory) -> str:
-        pass
+    def create_handler(data_category: DataCategory) -> CleaningDataHandler:
+        if data_category == DataCategory.FED_TEXT:
+            return FedCleaningHandler()
+        else:
+            raise ValueError("Unsupported data type")
 
 
 class CleaningDispatcher:
