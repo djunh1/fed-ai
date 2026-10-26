@@ -175,10 +175,21 @@ _RULES: tuple[UrlRule, ...] = (
 )
 
 
-def iter_index_urls() -> Iterator[str]:
-    """Yield every FOMC index page URL, oldest first."""
-    for year in range(FIRST_HISTORICAL_YEAR, LAST_HISTORICAL_YEAR + 1):
-        yield f"{BASE}/monetarypolicy/fomchistorical{year}.htm"
+def iter_index_urls(*, incremental: bool = False) -> Iterator[str]:
+    """Yield every FOMC index page URL, oldest first.
+
+    `incremental` yields only the pages that can still change. The 85
+    fomchistorical pages are frozen -- 1936 will never gain a document -- so
+    walking them on an update run costs 85 fetches to discover nothing.
+    Only fomccalendars.htm and the press feed move.
+
+    Note this is discovery scope, not caching. An incremental run must also
+    pass force=True, or a cached calendars page replays and no new meeting
+    can ever be seen.
+    """
+    if not incremental:
+        for year in range(FIRST_HISTORICAL_YEAR, LAST_HISTORICAL_YEAR + 1):
+            yield f"{BASE}/monetarypolicy/fomchistorical{year}.htm"
     yield CALENDARS_URL
 
 
@@ -232,6 +243,35 @@ def _media_type(url: str) -> str:
     return "application/pdf" if url.lower().endswith(".pdf") else "text/html"
 
 
+#: Where a press conference's transcript lives, given its meeting date. The
+#: index pages link only to the video page, so the transcript is never
+#: discovered by following links alone.
+_PRESCONF_TRANSCRIPT = f"{BASE}/mediacenter/files/FOMCpresconf{{date}}.pdf"
+_PRESCONF_PAGE = re.compile(r"/fomcpresconf(\d{8})\.htm$", re.IGNORECASE)
+
+
+def _press_conference_transcript(url: str, info_type: FedInfoType) -> str:
+    """Swap a press conference's video page for its transcript PDF.
+
+    fomcpresconf{date}.htm is a video player and nothing else -- its entire
+    extracted text is keyboard shortcuts ("[Space Bar] toggles play/pause")
+    plus a list of related links. 659 chars of pure chrome, with the actual
+    transcript behind a PDF link the index pages never point at.
+
+    Constructed rather than scraped: reading the link out of each page would
+    cost 94 extra fetches in the manifest step, which is otherwise ~90 for
+    the whole corpus. The shape was verified against 8 press conferences
+    spanning 2011-2024, all of which resolved. A date that does not resolve
+    is recorded as a failed fetch by the text step rather than ending the
+    run, so a future change to the URL scheme surfaces as missing documents
+    rather than as silence.
+    """
+    if info_type is not FedInfoType.PRESS_CONFERENCE:
+        return url
+    match = _PRESCONF_PAGE.search(url)
+    return _PRESCONF_TRANSCRIPT.format(date=match.group(1)) if match else url
+
+
 def parse_index(html: bytes) -> list[FedSourceDocument]:
     """Extract every recognised document from one index page.
 
@@ -244,11 +284,16 @@ def parse_index(html: bytes) -> list[FedSourceDocument]:
 
     for anchor in soup.find_all("a", href=True):
         url = urljoin(BASE, anchor["href"])
-        if url in docs:
-            continue
 
         classified = classify_url(url)
         if classified is None or classified.info_type is FedInfoType.UNKNOWN:
+            continue
+
+        # Classify first, then rewrite, then dedupe: the press conference
+        # swap changes the URL, so deduping on the pre-swap value would let
+        # one transcript in twice if a page linked both page and PDF.
+        url = _press_conference_transcript(url, classified.info_type)
+        if url in docs:
             continue
 
         docs[url] = FedSourceDocument(
@@ -266,14 +311,22 @@ def iter_documents(
         index_urls: Iterable[str] | None = None,
         *,
         cache_dir: Path | None = None,
-        force: bool = False
+        force: bool = False,
+        incremental: bool = False,
 ) -> Iterator[FedSourceDocument]:
 
     seen: set[str] = set()
 
-    for index_url in iter_index_urls() if index_urls is None else index_urls:
+    pages = iter_index_urls(incremental=incremental) if index_urls is None else index_urls
+    # An incremental run visits only pages that can still change, so a cache
+    # hit there is always wrong -- it replays the last run and no new meeting
+    # can ever appear. Implying force removes the chance of configuring the
+    # cheap path and the stale path independently.
+    fetch_force = force or incremental
+
+    for index_url in pages:
         try:
-            html = get(index_url, cache_dir=cache_dir, force=force)
+            html = get(index_url, cache_dir=cache_dir, force=fetch_force)
         except (httpx.HTTPStatusError, httpx.TransportError) as exc:
             logger.warning(f"Skipping index page {index_url}: {exc!r}")
             continue
@@ -338,11 +391,19 @@ def _extract_html(content: bytes) -> ExtractedText:
     for tag in soup(_CHROME_TAGS):
         tag.decompose()
 
-    # Container ids vary by era: #article on modern pages, #content on 1990s
-    # and 2010s layouts. Falling straight through to <body> drags the whole
-    # nav in -- a 1993 minutes page goes from ~25k useful chars to 74k.
+    # Container ids vary by era: #article on modern pages, #leftText on the
+    # 2010s Beige Book layout, #content on 1990s and 2010s layouts. Falling
+    # straight through to <body> drags the whole nav in -- a 1993 minutes
+    # page goes from ~25k useful chars to 74k.
+    #
+    # #leftText must be tried before #content, not after: Beige Book pages
+    # have both, and the outer #content keeps the breadcrumb and the
+    # twelve-district link list ("Home > Monetary Policy > Beige Book ...").
+    # Pages without the Beige Book layout have no #leftText and fall through
+    # to #content exactly as before.
     node = (
         soup.find(id="article")
+        or soup.find(id="leftText")
         or soup.find(id="content")
         or soup.find("main")
         or soup.body

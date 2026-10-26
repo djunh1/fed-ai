@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+    // ---- infrastructure -------------------------------------------------
     {
       "name": "Debug: http.get",
       "type": "debugpy",
@@ -10,10 +11,21 @@
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
+    {
+      "name": "Debug: RateLimiter",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_rate_limiter.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    // ---- federalreserve.gov ---------------------------------------------
     {
       "name": "Debug: fedgov index URLs",
       "type": "debugpy",
@@ -23,9 +35,7 @@
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
     {
       "name": "Debug: parse_index",
@@ -36,22 +46,7 @@
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
-    },
-    {
-      "name": "Debug: try pattern",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/temp/try_pattern.py",
-      "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}",
-      "python": "${workspaceFolder}/.venv/bin/python",
-      "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
     {
       "name": "Debug: iter_documents",
@@ -62,9 +57,7 @@
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
     {
       "name": "Debug: fetch_press_index",
@@ -75,23 +68,201 @@
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
     {
-      "name": "Debug: current file",
+      "name": "Debug: try pattern (regex scratchpad)",
       "type": "debugpy",
       "request": "launch",
-      "program": "${file}",
+      "program": "${workspaceFolder}/temp/try_pattern.py",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true,
-      "env": {
-        "PYTHONPATH": "${workspaceFolder}"
-      }
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     },
+
+    // ---- FRASER ----------------------------------------------------------
+    {
+      "name": "Debug: FraserClient",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fraser.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // Steps 0-2 are offline (saved samples + a fake client); 3-5 need
+      // FED_API_KEY and the network.
+      "name": "Debug: FraserApi (adapter)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fraser_api.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    // ---- persistence and pipeline ---------------------------------------
+    {
+      "name": "Debug: persistence (dispatcher + Mongo)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_persistence.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // Read-only. Judge the stored corpus by eye: coverage, a quality scan
+      // for nav chrome and OCR damage, and documents printed for reading.
+      "name": "Debug: browse the corpus",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_corpus.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // The local orchestrator runs steps in THIS process, so breakpoints
+      // inside build_fed_manifest / extract_fed_text are hit normally.
+      "name": "Debug: ETL pipeline — fed.gov",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": ["--run-etl", "--no-cache"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // The monthly update: 2 index fetches instead of 86.
+      "name": "Debug: ETL pipeline — fed.gov incremental",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": [
+        "--run-etl",
+        "--no-cache",
+        "--etl-config-filename",
+        "fed_data_etl_incremental.yaml"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // Same pipeline, sources: [fraser]. Needs FED_API_KEY.
+      "name": "Debug: ETL pipeline — FRASER",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": [
+        "--run-etl",
+        "--no-cache",
+        "--etl-config-filename",
+        "fraser_data_etl.yaml"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    // ---- FMP -------------------------------------------------------------
+    {
+      // Step 0 offline; 1-2 need FMP_API_KEY. Step 1 saves a sample.
+      "name": "Debug: FmpClient",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    {
+      // Steps 0-1 offline on saved samples; step 2 needs FMP_API_KEY.
+      "name": "Debug: FmpEarningsApi (adapter)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp_api.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    {
+      // Offline. Snapshot IO, then one simulated incremental pass over the samples.
+      "name": "Debug: FMP snapshot",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp_snapshot.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    {
+      // Full run. Set `limit` in the config for a smoke run.
+      "name": "Debug: ETL pipeline — FMP earnings",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": ["--run-fmp-earnings-etl", "--no-cache"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      "name": "Debug: ETL pipeline — FMP earnings incremental",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.run",
+      "args": ["--run-fmp-earnings-etl", "--no-cache", "--etl-config-filename", "fmp_earnings_etl_incremental.yaml"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      // Reads metadata back from the last FMP run via the ZenML client.
+      "name": "Debug: FMP run metadata",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/temp/debug_fmp_metadata.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+
+    // ---- tests -----------------------------------------------------------
     {
       "name": "Debug: pytest (current file)",
       "type": "debugpy",
@@ -102,6 +273,30 @@
       "cwd": "${workspaceFolder}",
       "python": "${workspaceFolder}/.venv/bin/python",
       "justMyCode": true
+    },
+    {
+      "name": "Debug: pytest (all)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests/", "-v"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true
+    },
+
+    // ---- catch-all -------------------------------------------------------
+    {
+      "name": "Debug: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "justMyCode": true,
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
     }
   ]
 }

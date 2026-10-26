@@ -15,6 +15,9 @@ parameters:
   # Title 677 is 11 API calls. Cheap enough to always refetch, and a cached
   # last page can never show a new meeting.
   force: true
+  # Accepted and ignored by FraserApi: a full pass is 11 API calls, so there
+  # is nothing worth skipping. Here for parity with the fed.gov configs.
+  incremental: false
   # FRASER's whole value is the early record -- it reaches back to
   # 1933-07-20, where fed.gov's archive starts 1936-03-18 -- and the clean
   # pre-extracted text for documents fed.gov only has as scans. All 581

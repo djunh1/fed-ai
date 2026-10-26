@@ -4,7 +4,7 @@ from abc import ABC
 from pydantic import UUID4, Field
 
 from .base import NoSQLBaseDocument
-from .types import FedInfoType, SourceSystem
+from .types import DataCategory, FedInfoType, SourceSystem
 
 
 def to_bson_datetime(value: datetime.date) -> datetime.datetime:
@@ -28,9 +28,9 @@ class FedDocument(NoSQLBaseDocument):
     """
 
     source: SourceSystem
-    info_type: FedInfoType
-    meeting_date: datetime.datetime
-    title: str
+    info_type: FedInfoType | None = None
+    meeting_date: datetime.datetime | None = None
+    title: str | None = None
     url: str
     media_type: str = "application/pdf"
     text_url: str | None = None
@@ -38,7 +38,7 @@ class FedDocument(NoSQLBaseDocument):
     page_count: int | None = None
 
     class Settings:
-        name = "fed_documents"
+        name = DataCategory.FED_DOCUMENTS
 
 
 class FedTextDocument(NoSQLBaseDocument):
@@ -55,13 +55,18 @@ class FedTextDocument(NoSQLBaseDocument):
     page_chars: list[int] = Field(default_factory=list)
     failed_pages: list[int] = Field(default_factory=list)
     extracted_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    # Joined in from FedDocument by query_data_warehouse.
+    info_type: FedInfoType | None = None
+    source: SourceSystem | None = None
+    meeting_date: datetime.datetime | None = None
+    title: str | None = None
 
     class Settings:
-        name = "fed_text"
+        name = DataCategory.FED_TEXT
 
 
-class Document(NoSQLBaseDocument, ABC):
-    content: dict
-    platform: str
-    author_id: UUID4 = Field(alias="author_id")
-    author_full_name: str = Field(alias="author_full_name")
+# class Document(NoSQLBaseDocument, ABC):
+#     content: dict
+#     platform: str
+#     author_id: UUID4 = Field(alias="author_id")
+#     author_full_name: str = Field(alias="author_full_name")

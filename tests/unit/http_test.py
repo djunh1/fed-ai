@@ -230,6 +230,49 @@ def test_unparseable_retry_after_falls_back_to_backoff(fake_get, sleeps) -> None
 
 
 # --------------------------------------------------------------------------
+# retry_statuses
+# --------------------------------------------------------------------------
+
+
+def test_listed_status_is_retried(fake_get, sleeps) -> None:
+    """FMP throttles with 401; callers can opt it in."""
+    fake = fake_get(_response(401))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        get(URL, retry_statuses=(401, 429))
+
+    assert fake.count == MAX_ATTEMPTS
+    assert sleeps == [1, 2]
+
+
+def test_listed_status_recovers_when_a_retry_succeeds(fake_get, sleeps) -> None:
+    fake = fake_get(_response(401), _response(200))
+
+    assert get(URL, retry_statuses=(401,)) == BODY
+    assert fake.count == 2
+
+
+def test_unlisted_429_is_not_retried_when_the_list_omits_it(fake_get, sleeps) -> None:
+    """Replaces the default, does not extend it."""
+    fake = fake_get(_response(429))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        get(URL, retry_statuses=())
+
+    assert fake.count == 1
+    assert sleeps == []
+
+
+def test_server_errors_are_retried_regardless_of_the_list(fake_get, sleeps) -> None:
+    fake = fake_get(_response(503))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        get(URL, retry_statuses=())
+
+    assert fake.count == MAX_ATTEMPTS
+
+
+# --------------------------------------------------------------------------
 # transport failures
 # --------------------------------------------------------------------------
 

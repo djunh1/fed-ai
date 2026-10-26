@@ -26,6 +26,8 @@ from llm_engineering.application.api.fedgov import (
     Classified,
     UrlRule,
     classify_url,
+    extract_text,
+    iter_documents,
     iter_index_urls,
     parse_index,
 )
@@ -472,3 +474,155 @@ def test_rule_provenance_is_not_part_of_equality() -> None:
     with_rule = Classified(FedInfoType.MINUTES, _date("1995-02-01"), "https://x", rule)
 
     assert bare == with_rule
+
+
+# ---------------------------------------------------------------------------
+# iter_index_urls(incremental=True) -- the monthly-update path
+# ---------------------------------------------------------------------------
+
+
+def test_incremental_yields_only_the_live_page() -> None:
+    """The 85 fomchistorical pages are frozen: 1936 will never gain a
+    document. Walking them on an update run costs 85 fetches to discover
+    nothing."""
+    assert list(iter_index_urls(incremental=True)) == [CALENDARS_URL]
+
+
+def test_incremental_is_a_strict_subset_of_full() -> None:
+    full = set(iter_index_urls())
+    incremental = set(iter_index_urls(incremental=True))
+
+    assert incremental < full
+
+
+def test_full_is_still_the_default() -> None:
+    """Defaulting to the cheap path would silently stop discovering history."""
+    assert len(list(iter_index_urls())) == len(list(iter_index_urls(incremental=False)))
+    assert len(list(iter_index_urls())) > 1
+
+
+def test_incremental_implies_force(monkeypatch) -> None:
+    """A cached calendars page replays the last run, so an incremental pass
+    that honoured the cache could never see a new meeting."""
+    seen: list[bool] = []
+
+    def fake_get(url, *, cache_dir=None, force=False, **_):
+        seen.append(force)
+        return b"<html></html>"
+
+    monkeypatch.setattr("llm_engineering.application.api.fedgov.get", fake_get)
+
+    list(iter_documents(incremental=True, force=False))
+
+    assert seen == [True]
+
+
+def test_full_pass_honours_the_cache(monkeypatch) -> None:
+    """The inverse: a full run must not force 86 pages it already has."""
+    seen: list[bool] = []
+
+    def fake_get(url, *, cache_dir=None, force=False, **_):
+        seen.append(force)
+        return b"<html></html>"
+
+    monkeypatch.setattr("llm_engineering.application.api.fedgov.get", fake_get)
+
+    list(iter_documents(incremental=False, force=False))
+
+    assert not any(seen)
+    assert len(seen) > 1
+
+
+# ---------------------------------------------------------------------------
+# #leftText: the 2010s Beige Book container
+# ---------------------------------------------------------------------------
+
+BEIGE_BOOK_HTML = b"""
+<html><body>
+  <div id="content">
+    <p>Home</p><p>&gt;</p><p>Monetary Policy</p><p>&gt;</p><p>Beige Book</p>
+    <p>Print</p>
+    <p>Boston</p><p>New York</p><p>Philadelphia</p>
+    <div id="leftText">
+      <p>Full Report</p>
+      <p>Summary of Commentary on Current Economic Conditions.</p>
+    </div>
+  </div>
+</body></html>
+"""
+
+
+def test_beige_book_prefers_left_text_over_content() -> None:
+    """Beige Book pages have both. The outer #content keeps the breadcrumb
+    and the twelve-district link list."""
+    text = extract_text(BEIGE_BOOK_HTML, "text/html").text
+
+    assert text.startswith("Full Report")
+    assert "Monetary Policy" not in text
+    assert "Philadelphia" not in text
+
+
+def test_article_still_wins_over_left_text() -> None:
+    """#article is the modern container and stays first in the chain."""
+    html = b'<html><body><div id="article">real</div><div id="leftText">no</div></body></html>'
+
+    assert extract_text(html, "text/html").text == "real"
+
+
+def test_pages_without_left_text_are_unchanged() -> None:
+    """The 1990s layout has no #leftText and must still reach #content."""
+    html = b'<html><body><div id="content">Release Date: July 6, 1995</div></body></html>'
+
+    assert extract_text(html, "text/html").text == "Release Date: July 6, 1995"
+
+
+# ---------------------------------------------------------------------------
+# press conference: the video page is swapped for the transcript
+# ---------------------------------------------------------------------------
+
+PRESCONF_INDEX = (
+    b'<html><body><a href="/monetarypolicy/fomcpresconf20150318.htm">'
+    b"Press Conference</a></body></html>"
+)
+
+
+def test_press_conference_page_becomes_the_transcript() -> None:
+    """fomcpresconf{date}.htm is a video player whose entire extracted text
+    is keyboard shortcuts. The transcript is a PDF the index never links."""
+    (doc,) = parse_index(PRESCONF_INDEX)
+
+    assert doc.url == f"{BASE}/mediacenter/files/FOMCpresconf20150318.pdf"
+    assert doc.info_type is FedInfoType.PRESS_CONFERENCE
+    assert doc.media_type == "application/pdf"
+    assert doc.meeting_date == _date("2015-03-18")
+
+
+def test_press_conference_pdf_is_left_alone() -> None:
+    """A page that links the PDF directly must not be rewritten again."""
+    html = b'<html><body><a href="/mediacenter/files/FOMCpresconf20150318.pdf">T</a></body></html>'
+
+    (doc,) = parse_index(html)
+
+    assert doc.url == f"{BASE}/mediacenter/files/FOMCpresconf20150318.pdf"
+
+
+def test_page_and_pdf_collapse_to_one_document() -> None:
+    """Deduping on the pre-swap URL would let one transcript in twice."""
+    html = (
+        b'<html><body>'
+        b'<a href="/monetarypolicy/fomcpresconf20150318.htm">Video</a>'
+        b'<a href="/mediacenter/files/FOMCpresconf20150318.pdf">Transcript</a>'
+        b"</body></html>"
+    )
+
+    assert len(parse_index(html)) == 1
+
+
+def test_other_types_are_never_rewritten() -> None:
+    """The swap is keyed on info_type, so nothing else can be caught by it."""
+    html = b'<html><body><a href="/monetarypolicy/fomcminutes20150318.htm">M</a></body></html>'
+
+    (doc,) = parse_index(html)
+
+    assert doc.url.endswith("fomcminutes20150318.htm")
+    assert doc.media_type == "text/html"

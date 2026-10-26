@@ -254,3 +254,28 @@ def test_unknown_host_still_returns_none():
     dispatcher = ApiDispatcher.build().register_fraser()
 
     assert dispatcher.get_api("https://example.org/nothing.pdf") is None
+
+
+# --- incremental: accepted, and treated as a cache bypass ----------------
+
+
+def test_incremental_is_accepted_and_does_not_narrow_the_pass():
+    """11 API calls is already cheap, and new meetings land on the last page,
+    which a partial pass would have to reach anyway."""
+    client = FakeClient([record("rg82_fomcminutes_19330720.pdf")])
+
+    full = list(FraserApi(client=client).iter_documents(incremental=False))
+    incremental = list(FraserApi(client=client).iter_documents(incremental=True))
+
+    assert [d.url for d in full] == [d.url for d in incremental]
+
+
+def test_incremental_implies_force():
+    """It still has to bypass the cache, or the update run replays the pages
+    it saw last time and no new meeting can appear."""
+    client = FakeClient([record("rg82_fomcminutes_19330720.pdf")])
+    api = FraserApi(client=client)
+
+    list(api.iter_documents(incremental=True, force=False))
+
+    assert client.force_seen == [True]

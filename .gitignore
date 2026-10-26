@@ -10,6 +10,8 @@ wheels/
 .venv
 .env
 
+.DS_Store
+
 docs
 .claude
 .pytest_cache
@@ -17,3 +19,7 @@ docs
 
 /temp
 /teaching 
+
+# Parquet snapshots written by the FMP earnings ETL
+/data
+/tools

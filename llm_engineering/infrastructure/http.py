@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from pathlib import Path
 import httpx
 import hashlib
@@ -48,7 +49,10 @@ def get(
     cache_dir: Path | None = None,  # None = no caching
     force: bool = False,
     limiter: "RateLimiter | None" = None,  # None = unthrottled
+    retry_statuses: Collection[int] = (429,),
 ) -> bytes:
+    """GET with disk cache, throttle and retries. 5xx always retries;
+    `retry_statuses` adds 4xx codes (FMP throttles with 401)."""
 
     # Read cache
     if cache_dir is not None:
@@ -74,7 +78,7 @@ def get(
             time.sleep(2 ** attempt)
             continue
 
-        retryable = response.status_code == 429 or response.status_code >= 500
+        retryable = response.status_code in retry_statuses or response.status_code >= 500
 
         if not retryable or last_attempt:
             break

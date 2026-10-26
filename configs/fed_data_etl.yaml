@@ -12,8 +12,11 @@ parameters:
   cache_dir: temp/http_cache
   # The press feed is always refetched regardless; this forces index pages too.
   force: false
+  # Full discovery: all 85 frozen fomchistorical pages plus fomccalendars.
+  # fed_data_etl_incremental.yaml is the monthly-update counterpart.
+  incremental: false
   # Bound the expensive half. Widen once a single year looks right.
-  year_from: 1995
-  year_to: 1995
+  year_from: 2015
+  year_to: 2015
   # Cap for a smoke run; null means "every document in the year range".
   limit: null

@@ -10,9 +10,8 @@ class DataCategory(StrEnum):
     PREFERENCE_DATASET_SAMPLES = "preference_dataset_samples"
     PREFERENCE_DATASET = "preference_dataset"
 
-    POSTS = "posts"
-    ARTICLES = "articles"
-    REPOSITORIES = "repositories"
+    FED_DOCUMENTS = "fed_documents"
+    FED_TEXT = "fed_text"
 
 
 class FedInfoType(StrEnum):
