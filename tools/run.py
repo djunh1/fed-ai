@@ -5,7 +5,7 @@ import click
 from loguru import logger
 
 from llm_engineering import settings
-from pipelines import fed_data_etl, fmp_earnings_etl
+from pipelines import fed_data_etl, fmp_earnings_etl, feature_engineering_fed
 
 
 @click.command(
@@ -53,6 +53,12 @@ Examples:
     help="Whether to run the FMP earnings ETL pipeline.",
 )
 @click.option(
+    "--run-feature-engineering",
+    is_flag=True,
+    default=False,
+    help="Whether to run the Fed feature engineering pipeline.",
+)
+@click.option(
     "--etl-config-filename",
     default=None,
     help="Config in configs/. Defaults to the chosen pipeline's own.",
@@ -68,10 +74,11 @@ def main(
     run_etl: bool = False,
     run_fmp_earnings_etl: bool = False,
     etl_config_filename: str | None = None,
+    run_feature_engineering: bool = False,
     export_settings: bool = False,
 ) -> None:
-    assert run_etl or run_fmp_earnings_etl or export_settings, "Please specify an action to run."
-    assert not (run_etl and run_fmp_earnings_etl), "Run one ETL pipeline at a time."
+    assert run_etl or run_fmp_earnings_etl or run_feature_engineering or export_settings, "Please specify an action to run."
+    assert sum([run_etl, run_fmp_earnings_etl, run_feature_engineering]) <= 1, "Run one pipeline at a time."
 
     if export_settings:
         logger.info("Exporting settings to ZenML secrets.")
@@ -87,6 +94,9 @@ def main(
 
     if run_fmp_earnings_etl:
         _run(fmp_earnings_etl, "fmp_earnings_etl", etl_config_filename or "fmp_earnings_etl.yaml", root_dir, pipeline_args)
+
+    if run_feature_engineering:
+        _run(feature_engineering_fed, "feature_engineering_fed", etl_config_filename or "feature_engineering_fed.yaml", root_dir, pipeline_args)
 
 
 def _run(pipeline, name: str, config_filename: str, root_dir: Path, pipeline_args: dict) -> None:

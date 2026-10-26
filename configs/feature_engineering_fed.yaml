@@ -1,0 +1,3 @@
+parameters:
+  # FedInfoType values. Widen once these look right in Qdrant.
+  fed_doc_types: [minutes, statement]
