@@ -1,10 +1,11 @@
-"""Unit tests for chunk_text and FedChunkingHandler. No database.
+"""Unit tests for chunk_text, FedChunkingHandler and ChunkingDispatcher. No database.
 
 Run: uv run pytest tests/unit/chunking_test.py -v
 """
 
 import datetime
 
+from llm_engineering.application.preprocessing import ChunkingDispatcher
 from llm_engineering.application.preprocessing.chunking_data_handlers import FedChunkingHandler
 from llm_engineering.application.preprocessing.operations import chunk_text
 from llm_engineering.domain.chunks import FedChunk
@@ -67,3 +68,10 @@ def test_ids_are_stable_across_runs() -> None:
     doc = _cleaned(SENTENCE)
 
     assert FedChunkingHandler().chunk(doc)[0].id == FedChunkingHandler().chunk(doc)[0].id
+
+
+def test_dispatcher_routes_cleaned_fed_document_to_fed_handler() -> None:
+    chunks = ChunkingDispatcher.dispatch(_cleaned(" ".join([SENTENCE] * 40)))
+
+    assert len(chunks) > 1
+    assert all(isinstance(chunk, FedChunk) for chunk in chunks)

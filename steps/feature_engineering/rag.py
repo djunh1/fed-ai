@@ -3,18 +3,31 @@ from zenml import get_step_context, step
 
 from llm_engineering.application import utils
 from llm_engineering.application.preprocessing import ChunkingDispatcher, EmbeddingDispatcher
-from llm_engineering.domain.chunks import Chunk
-from llm_engineering.domain.embedded_chunks import EmbeddedChunk
 
 
 @step
 def chunk_and_embed(
     cleaned_documents: Annotated[list, "cleaned_documents"],
 ) -> Annotated[list, "embedded_documents"]:
-    pass
+    num_chunks = 0
+    embedded_chunks = []
+    for document in cleaned_documents:
+        chunks = ChunkingDispatcher.dispatch(document)
+        num_chunks += len(chunks)
 
-def _add_chunks_metadata(chunks: list[Chunk], metadata: dict) -> dict:
-    pass
+        for batched_chunks in utils.misc.batch(chunks, 10):
+            batched_embedded_chunks = EmbeddingDispatcher.dispatch(batched_chunks)
+            embedded_chunks.extend(batched_embedded_chunks)
 
-def _add_embeddings_metadata(embedded_chunks: list[EmbeddedChunk], metadata: dict) -> dict:
-    pass
+    step_context = get_step_context()
+    step_context.add_output_metadata(
+        output_name="embedded_documents",
+        metadata={
+            "num_documents": len(cleaned_documents),
+            "num_chunks": num_chunks,
+            "num_embedded_chunks": len(embedded_chunks),
+            "embedding": embedded_chunks[0].metadata if embedded_chunks else {},
+        },
+    )
+
+    return embedded_chunks
